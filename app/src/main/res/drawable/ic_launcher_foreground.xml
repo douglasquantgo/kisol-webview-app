@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Letra K estilizada -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M30,25 L40,25 L40,50 L55,25 L68,25 L50,52 L70,83 L56,83 L40,56 L40,83 L30,83 Z"/>
+
+</vector>

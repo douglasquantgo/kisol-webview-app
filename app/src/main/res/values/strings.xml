@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">KisolTec</string>
+    <string name="loading_message">Carregando...</string>
+    <string name="error_no_internet">Sem conexão com a internet</string>
+    <string name="error_page_load">Erro ao carregar a página. Toque para tentar novamente.</string>
+    <string name="btn_retry">Tentar novamente</string>
+    <string name="btn_exit">Sair</string>
+</resources>
