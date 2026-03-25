@@ -285,55 +285,46 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "=== SSL ERROR RECEIVED ===");
             Log.d(TAG, "URL: " + error.getUrl());
             Log.d(TAG, "Primary Error: " + error.getPrimaryError());
-            Log.d(TAG, "ToString: " + error.toString());
 
             // Traduzir o tipo de erro
             String errorType = "Desconhecido";
             switch (error.getPrimaryError()) {
                 case android.net.http.SslError.SSL_DATE_INVALID:
-                    errorType = "Data do certificado inválida";
+                    errorType = "Data invalida";
                     break;
                 case android.net.http.SslError.SSL_EXPIRED:
                     errorType = "Certificado expirado";
                     break;
                 case android.net.http.SslError.SSL_IDMISMATCH:
-                    errorType = "ID do certificado não confere";
+                    errorType = "ID mismatch";
                     break;
                 case android.net.http.SslError.SSL_NOTYETVALID:
-                    errorType = "Certificado ainda não válido";
+                    errorType = "Ainda nao valido";
                     break;
                 case android.net.http.SslError.SSL_UNTRUSTED:
-                    errorType = "Certificado não confiável (CA desconhecida)";
+                    errorType = "CA desconhecida";
                     break;
                 case android.net.http.SslError.SSL_INVALID:
-                    errorType = "Certificado inválido";
+                    errorType = "Invalido";
                     break;
             }
 
-            Log.d(TAG, "Tipo de erro SSL: " + errorType);
-
-            // Mostrar popup com detalhes do erro
             final String finalErrorType = errorType;
-            final SslErrorHandler finalHandler = handler;
+            Log.d(TAG, "Tipo erro SSL: " + finalErrorType);
 
-            runOnUiThread(() -> {
-                new AlertDialog.Builder(MainActivity.this)
-                    .setTitle("Erro SSL Detectado")
-                    .setMessage("Tipo: " + finalErrorType + "\n" +
-                               "URL: " + error.getUrl() + "\n\n" +
-                               "Deseja continuar mesmo assim?")
-                    .setPositiveButton("Continuar", (dialog, which) -> {
-                        Log.d(TAG, "onReceivedSslError: Usuário escolheu continuar");
-                        finalHandler.proceed();
-                    })
-                    .setNegativeButton("Cancelar", (dialog, which) -> {
-                        Log.d(TAG, "onReceivedSslError: Usuário escolheu cancelar");
-                        finalHandler.cancel();
-                        showError();
-                    })
-                    .setCancelable(false)
-                    .show();
+            // Mostrar Toast com o tipo de erro
+            MainActivity.this.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Toast.makeText(MainActivity.this,
+                        "SSL Error: " + finalErrorType,
+                        Toast.LENGTH_LONG).show();
+                }
             });
+
+            // Sempre prosseguir para o domínio do app
+            handler.proceed();
+            Log.d(TAG, "SSL Error: handler.proceed() chamado");
         }
 
         @Override
