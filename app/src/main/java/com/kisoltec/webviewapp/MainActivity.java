@@ -15,6 +15,7 @@ import android.os.Looper;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.WindowManager;
+import android.webkit.ClientCertRequest;
 import android.webkit.CookieManager;
 import android.webkit.CookieSyncManager;
 import android.webkit.HttpAuthHandler;
@@ -43,6 +44,7 @@ import androidx.webkit.WebViewCompat;
 public class MainActivity extends AppCompatActivity {
 
     private static final String URL_APP = "https://kisoltec-producao-webapp.web.app/";
+    private static final String TRUSTED_DOMAIN = "kisoltec-producao-webapp.web.app";
     private static final int PAGE_LOAD_TIMEOUT = 30000; // 30 segundos
 
     private WebView webView;
@@ -118,6 +120,12 @@ public class MainActivity extends AppCompatActivity {
 
     @SuppressLint("SetJavaScriptEnabled")
     private void setupWebView() {
+        // Forçar TLS 1.2 para Samsung Android 5.x
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN
+                && Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP_MR1) {
+            enableTls12();
+        }
+
         WebSettings webSettings = webView.getSettings();
 
         // Configurações básicas
@@ -238,10 +246,21 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onReceivedSslError(WebView view, SslErrorHandler handler, android.net.http.SslError error) {
-            // IMPORTANTE: Para Samsung Android 5
-            // Em produção, você deve implementar validação adequada de certificados
-            // Por ora, prosseguir para evitar bloqueio em dispositivos antigos
-            handler.proceed();
+            // Para o domínio do app, ignorar erros de SSL
+            // Necessário para Android 5.1.1 que não reconhece certificados Let's Encrypt modernos
+            String errorUrl = error.getUrl();
+            if (errorUrl != null && errorUrl.contains(TRUSTED_DOMAIN)) {
+                handler.proceed();
+                return;
+            }
+            // Para outros domínios, cancelar
+            handler.cancel();
+        }
+
+        @Override
+        public void onReceivedClientCertRequest(WebView view, ClientCertRequest request) {
+            // Permite requisições sem certificado cliente
+            request.proceed(null, null);
         }
 
         @Override
@@ -359,5 +378,21 @@ public class MainActivity extends AppCompatActivity {
 
     private String getDeviceInfo() {
         return Build.MANUFACTURER + " " + Build.MODEL + " (API " + Build.VERSION.SDK_INT + ")";
+    }
+
+    /**
+     * Habilita TLS 1.2 para dispositivos Android 5.x
+     * Necessário para compatibilidade com certificados SSL modernos
+     */
+    private void enableTls12() {
+        try {
+            // Força o uso de TLS 1.2 no Android 5.x
+            // Isso é necessário porque o Samsung Android 5.1.1 pode não usar TLS 1.2 por padrão
+            javax.net.ssl.SSLContext sslContext = javax.net.ssl.SSLContext.getInstance("TLSv1.2");
+            sslContext.init(null, null, null);
+            javax.net.ssl.SSLContext.setDefault(sslContext);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
