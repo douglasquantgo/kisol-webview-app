@@ -134,16 +134,9 @@ public class MainActivity extends AppCompatActivity {
         webSettings.setMediaPlaybackRequiresUserGesture(false);
 
         // Configurações de cache
+        // Nota: AppCache foi removido no Android 13+ (API 33)
+        // DomStorage é usado como alternativa moderna
         webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
-        // AppCache foi removido no Android 13+ (API 33), DomStorage é usado no lugar
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-            try {
-                webSettings.setAppCacheEnabled(true);
-                webSettings.setAppCachePath(getCacheDir().getAbsolutePath());
-            } catch (Exception ignored) {
-                // Métodos removidos em algumas versões do SDK
-            }
-        }
 
         // Configurações para mixed content (HTTP em HTTPS)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
