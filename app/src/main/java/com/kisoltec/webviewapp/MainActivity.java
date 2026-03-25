@@ -15,6 +15,7 @@ import android.os.Looper;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.WindowManager;
+import android.util.Log;
 import android.webkit.ClientCertRequest;
 import android.webkit.CookieManager;
 import android.webkit.CookieSyncManager;
@@ -43,6 +44,7 @@ import androidx.webkit.WebViewCompat;
  */
 public class MainActivity extends AppCompatActivity {
 
+    private static final String TAG = "KisolWebView";
     private static final String URL_APP = "https://kisoltec-producao-webapp.web.app/";
     private static final String TRUSTED_DOMAIN = "kisoltec-producao-webapp.web.app";
     private static final int PAGE_LOAD_TIMEOUT = 30000; // 30 segundos
@@ -61,12 +63,21 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        // Log de informações do dispositivo
+        Log.d(TAG, "=== DISPOSITIVO ===");
+        Log.d(TAG, "Fabricante: " + Build.MANUFACTURER);
+        Log.d(TAG, "Modelo: " + Build.MODEL);
+        Log.d(TAG, "Android: " + Build.VERSION.RELEASE);
+        Log.d(TAG, "SDK: " + Build.VERSION.SDK_INT);
+
         // Tratativa para Samsung Android 5 - evitar crash com SSL
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
             try {
                 // Força inicialização de cookies para Android 5
                 CookieSyncManager.createInstance(this);
+                Log.d(TAG, "CookieSyncManager inicializado");
             } catch (Exception e) {
+                Log.e(TAG, "Erro ao inicializar CookieSyncManager: " + e.getMessage());
                 e.printStackTrace();
             }
         }
@@ -75,6 +86,12 @@ public class MainActivity extends AppCompatActivity {
 
         initViews();
         setupTimeout();
+
+        // Mostrar informações do dispositivo em um Toast
+        String deviceInfo = getDeviceInfo();
+        Toast.makeText(this, "Dispositivo: " + deviceInfo, Toast.LENGTH_LONG).show();
+        Log.d(TAG, "Dispositivo: " + deviceInfo);
+
         checkInternetAndLoad();
     }
 
@@ -120,9 +137,12 @@ public class MainActivity extends AppCompatActivity {
 
     @SuppressLint("SetJavaScriptEnabled")
     private void setupWebView() {
+        Log.d(TAG, "setupWebView: Iniciando configuração do WebView");
+
         // Forçar TLS 1.2 para Samsung Android 5.x
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN
                 && Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP_MR1) {
+            Log.d(TAG, "setupWebView: Habilitando TLS 1.2 para Android 5.x");
             enableTls12();
         }
 
@@ -164,6 +184,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void loadUrl() {
+        Log.d(TAG, "loadUrl: Carregando URL: " + URL_APP);
         loadingLayout.setVisibility(View.VISIBLE);
         errorLayout.setVisibility(View.GONE);
         webView.setVisibility(View.GONE);
@@ -172,6 +193,7 @@ public class MainActivity extends AppCompatActivity {
         // Iniciar timeout
         timeoutHandler.postDelayed(timeoutRunnable, PAGE_LOAD_TIMEOUT);
 
+        Log.d(TAG, "loadUrl: Chamando webView.loadUrl()");
         webView.loadUrl(URL_APP);
     }
 
@@ -207,6 +229,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onPageStarted(WebView view, String url, Bitmap favicon) {
             super.onPageStarted(view, url, favicon);
+            Log.d(TAG, "onPageStarted: " + url);
             progressBar.setProgress(0);
             progressBar.setVisibility(View.VISIBLE);
         }
@@ -214,6 +237,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onPageFinished(WebView view, String url) {
             super.onPageFinished(view, url);
+            Log.d(TAG, "onPageFinished: " + url);
             progressBar.setVisibility(View.GONE);
             showContent();
 
@@ -227,9 +251,15 @@ public class MainActivity extends AppCompatActivity {
         public void onReceivedError(WebView view, WebResourceRequest request,
                                     WebResourceError error) {
             super.onReceivedError(view, request, error);
+            Log.e(TAG, "onReceivedError: " + error.toString() + " URL: " + request.getUrl());
 
             // Só mostra erro se for o frame principal
             if (request.isForMainFrame()) {
+                runOnUiThread(() -> {
+                    Toast.makeText(MainActivity.this,
+                        "Erro de carregamento: " + error.toString(),
+                        Toast.LENGTH_LONG).show();
+                });
                 showError();
             }
         }
@@ -238,27 +268,77 @@ public class MainActivity extends AppCompatActivity {
         public void onReceivedHttpError(WebView view, WebResourceRequest request,
                                         WebResourceResponse errorResponse) {
             super.onReceivedHttpError(view, request, errorResponse);
+            Log.e(TAG, "onReceivedHttpError: " + errorResponse.getStatusCode() + " URL: " + request.getUrl());
 
             if (request.isForMainFrame()) {
+                runOnUiThread(() -> {
+                    Toast.makeText(MainActivity.this,
+                        "Erro HTTP: " + errorResponse.getStatusCode(),
+                        Toast.LENGTH_LONG).show();
+                });
                 showError();
             }
         }
 
         @Override
         public void onReceivedSslError(WebView view, SslErrorHandler handler, android.net.http.SslError error) {
-            // Para o domínio do app, ignorar erros de SSL
-            // Necessário para Android 5.1.1 que não reconhece certificados Let's Encrypt modernos
-            String errorUrl = error.getUrl();
-            if (errorUrl != null && errorUrl.contains(TRUSTED_DOMAIN)) {
-                handler.proceed();
-                return;
+            Log.d(TAG, "=== SSL ERROR RECEIVED ===");
+            Log.d(TAG, "URL: " + error.getUrl());
+            Log.d(TAG, "Primary Error: " + error.getPrimaryError());
+            Log.d(TAG, "ToString: " + error.toString());
+
+            // Traduzir o tipo de erro
+            String errorType = "Desconhecido";
+            switch (error.getPrimaryError()) {
+                case android.net.http.SslError.SSL_DATE_INVALID:
+                    errorType = "Data do certificado inválida";
+                    break;
+                case android.net.http.SslError.SSL_EXPIRED:
+                    errorType = "Certificado expirado";
+                    break;
+                case android.net.http.SslError.SSL_IDMISMATCH:
+                    errorType = "ID do certificado não confere";
+                    break;
+                case android.net.http.SslError.SSL_NOTYETVALID:
+                    errorType = "Certificado ainda não válido";
+                    break;
+                case android.net.http.SslError.SSL_UNTRUSTED:
+                    errorType = "Certificado não confiável (CA desconhecida)";
+                    break;
+                case android.net.http.SslError.SSL_INVALID:
+                    errorType = "Certificado inválido";
+                    break;
             }
-            // Para outros domínios, cancelar
-            handler.cancel();
+
+            Log.d(TAG, "Tipo de erro SSL: " + errorType);
+
+            // Mostrar popup com detalhes do erro
+            final String finalErrorType = errorType;
+            final SslErrorHandler finalHandler = handler;
+
+            runOnUiThread(() -> {
+                new AlertDialog.Builder(MainActivity.this)
+                    .setTitle("Erro SSL Detectado")
+                    .setMessage("Tipo: " + finalErrorType + "\n" +
+                               "URL: " + error.getUrl() + "\n\n" +
+                               "Deseja continuar mesmo assim?")
+                    .setPositiveButton("Continuar", (dialog, which) -> {
+                        Log.d(TAG, "onReceivedSslError: Usuário escolheu continuar");
+                        finalHandler.proceed();
+                    })
+                    .setNegativeButton("Cancelar", (dialog, which) -> {
+                        Log.d(TAG, "onReceivedSslError: Usuário escolheu cancelar");
+                        finalHandler.cancel();
+                        showError();
+                    })
+                    .setCancelable(false)
+                    .show();
+            });
         }
 
         @Override
         public void onReceivedClientCertRequest(WebView view, ClientCertRequest request) {
+            Log.d(TAG, "onReceivedClientCertRequest: " + request.getHost());
             // Permite requisições sem certificado cliente
             request.proceed(null, null);
         }
@@ -266,6 +346,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onReceivedHttpAuthRequest(WebView view, HttpAuthHandler handler,
                                               String host, String realm) {
+            Log.d(TAG, "onReceivedHttpAuthRequest: " + host);
             handler.cancel();
         }
     }
