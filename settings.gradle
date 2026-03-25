@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "KisolTec WebView"
+rootProject.name = "KisolTec Produção"
 include ':app'
