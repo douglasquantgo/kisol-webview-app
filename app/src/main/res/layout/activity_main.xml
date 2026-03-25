@@ -38,7 +38,7 @@
             android:layout_width="80dp"
             android:layout_height="80dp"
             android:src="@android:drawable/stat_notify_error"
-            android:tint="@color/colorPrimary"
+            android:tint="@color/colorPrimaryDark"
             android:contentDescription="@string/error_page_load" />
 
         <TextView
@@ -68,6 +68,14 @@
         android:orientation="vertical"
         android:background="@color/white">
 
+        <ImageView
+            android:layout_width="220dp"
+            android:layout_height="wrap_content"
+            android:adjustViewBounds="true"
+            android:src="@drawable/logo"
+            android:contentDescription="Kisoltec"
+            android:layout_marginBottom="32dp" />
+
         <ProgressBar
             android:layout_width="48dp"
             android:layout_height="48dp"
@@ -80,6 +88,7 @@
             android:layout_marginTop="16dp"
             android:text="@string/loading_message"
             android:textColor="@color/gray"
+            android:fontFamily="sans-serif"
             android:textSize="14sp" />
 
     </LinearLayout>
